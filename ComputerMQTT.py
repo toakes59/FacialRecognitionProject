@@ -36,17 +36,26 @@ while success:
     # finds center of face
     xMiddle = (x + (w/2))
     yMiddle = (y + (h/2))
+    #print("center")
 
     # calculates distance between current center and previous center
-    xMove = xMiddle - xPrev
-    yMove = yMiddle - yPrev
+    #xMove = xMiddle - xPrev
+    #yMove = yMiddle - yPrev
 
     # Determines how far x and y servo need to move
-    xMove = xMove / xRatio
-    yMove = yMove / yRatio
+    xMove = (xMiddle / xRatio) * 180
+    yMove = (yMiddle / yRatio) * 180
 
-    publish.single("CoreElectronics/x", xMove, hostname="test.mosquitto.org")
-    publish.single("CoreElectronics/y", yMove, hostname="test.mosquitto.org")
+    xMove = round(xMove)
+    yMove = round(yMove)
+    #print("rounded")
+
+    publish.single("faceServo/x", xMove, hostname="test.mosquitto.org")
+    publish.single("faceServo/y", yMove, hostname="test.mosquitto.org")
+    #print("sent")
+
+    xPrev = xMiddle
+    yPrev = yMiddle
 
     print(xMove)
     print(yMove)
