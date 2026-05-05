@@ -1,0 +1,137 @@
+Changes from 2.0 to 3.0
+For all programs:
+ - Network nodes are new hardware devices to connect Servos or Relais modules
+   to. The nodes are small and independent of the Raspi wiring. Since nodes just
+   need power supply and depending of the configuration a Ethernet cable, or
+   WiFi connection, installations may become huge with lots of nodes, servos and 
+   relais. All programs support network devices.
+ - Network devices and directly to the Raspi connected PCA9685 boards may work 
+   parallel. They do disturb each other if configured correctly. 
+ - Now all programs take the configuration from the application specific file
+   ConfigL.pm within the scene directory, that must be passed to each program
+   during start of the program. This way, several different Scenes may exist
+   parallel on a single Raspi. During start of trackui.pl with a new directory,
+   ConfigL will be automatically copied from /usr/local/bin/bechele/Modules
+   into this application specific directory. This means, if you want to change
+   parameters for a specific application/scene you need to edit ConfigL.pm in
+   its directory, not in /usr/local/bin/bechele/Modules.
+   
+trackui.pl:
+ - the setup of the servo bindings has moved into a seperate window that is 
+   opened at startup - otherwise acessible via button 'Servo_Matrix' 
+ - The servo matrix, where servos to be teached are selected is now smaller and
+   contains only one servo description for both, X and Y Joystick. Because the 
+   window is no more split into X and Y, there is much more space for notebook
+   pages. So the number of displayable servos has drastically incresed. This
+   is especially important for Installation with a big number of Servos/Relais.
+   With the default small window size, already around 500 Servos may be 
+   displayed. By resizing the window, the number may be even increased a lot.
+ - new feature via button 'Block_Operations'. Pressing this button opens a new
+   window that allows to save and load movement blocks from and to file. This
+   may be helpful, if special sequences need to be used sevral times. 
+ - Soupport for GPM mouse, so the program also allows mouse support using the
+   Keyboard and mouse and monitor directly connected to the Raspi.
+ - Operation of the program without mouse - only with keyboard is now possible.
+ - Now interprets comma separated servo names in ConfigL.pm as Relay setup. So
+   the number of elements in the comma separated servoname will result in 
+   servo matrix entries (maximum 16 - 0-15 are allowed) for Relay control. So 
+   each entry visible in the matrix is for 1 bit. Joystick movements still
+   control the binary state of the relais, where positions above middle will 
+   become 1 - relay on - and joystick position below middle become 0 - relay
+   off. The Matrix bindings work for both, relais and servos the same way. They
+   may be even mixed if this is desirable. 
+
+live.pl:
+ - New parameter $play_full_mp3 in ConfigL.pm, that stops the skip immediately
+   to the next mp3, if the 'next' button on the button pad is pressed. So the 
+   software plays the running MP3 till the end, till it reacts to the next 
+   button press. 
+ - New parameter $mp3loop This does change the default behaviour to repeat 
+   the last mp3 after the last mp3 has been reached. Parameter "mp3loop": it 
+   cwmay be important for unattended installations, where guests trigger the 
+   play of the scene by a light barrier or similar. At the end of all mp3 files,
+   the session loops to the first mp3 again.
+ - Removed a bug in repeat mode where after the repeat sound, the repeated
+   mp3 could not be interrupted by a new keypress.
+
+New program nodeconfig.pl
+ - This program is used to setup the network nodes and prepare them to receive 
+   the desired servo or relais data.
+ - saves the node settings in a data base to be able to keep the overview on
+   node's configurations, especially if a large number of nodes is in use. 
+   Without a data base it would be difficult to keep track of the node functions
+   and configuration. The data base is located in the scene directory.
+  
+Changes from 1.1 to 2.0
+For all programs:
+ - The number of addressable Servos is just limited by the number of PCA9685 
+   chips, by the speed of the I2C bus and by the refresh rate of the servos. 
+   Easily you may drive up to 400 Servos, until you reach serious limits.
+ - Change from PWM chip driver module Device::Chip::PCA9685 to RPi::MultiPCA9685
+   This module is far quicker and allows to address several PWM Boards in one go
+   Since there was no reasonable module available that used the continuous write
+   function of the chip, I wrote this module and published it on CPAN
+ - There is now only one servocalib.pl and servocalib-single.pl for the self
+   made joy stick and the gamepad. The selection, which one is in use is defined 
+   in Modules/ConfigL.pm using parameter: $use_gamepad.  
+ - There is now only one trackui.pl since the selection of the input device is
+   done via Modules/ConfigL.pm parameter $use_gamepad.
+ - After running any of the programs that move servos, the PWM will be disabled
+   This has the advantage, that mechanical blocks do not overheat the servos.
+
+trackui.pl: 
+ - Here we have most changes. The working principle is the same like before,
+   but the interface looks quite a bit changed.
+ - Since we now can address a big number of servos, the servo section is split
+   automatically into notebooks and the servo selection is switchable via the 
+   notebooks, depending on the number of configured servos.
+ - Since we may have lots of servos, when viewing a sequence of movements, only 
+   the servos selected in the servo section show data by default during viewing. 
+   You may switch on all servos by checking Box "View all"  but the screen 
+   output is moving very quickly which makes it uncomfortable to observe. 
+ - The speed of file loading is much quicker using a different algorithm.
+ - Possibility to change the servo refresh rate in Units of Hz. Resonable values 
+   are 3 to 25 Hz. Lower frequencies cause smaller .svo files and more 
+   addressable servos, where higher frequencies allow quicker movements.
+   Usually it makes no sense to have higher refresh rates than 20 or 25 Hz, 
+   because the human eye can resolve about a maximum of 25 changes per second.
+   One servo needs approximately a programming time of 0.55 ms. At 20 Hz you may 
+   address about 90 Servos and at 5 Hz you may address about 350 Servos.
+   However you run earlier into other limits. For example it is rather difficult
+   not to exceed the maximum cable lengths for the I2C Bus when using standard 
+   (Adafruit) PCA9685 boards. Also preventing the Back EMF of 350 servos moving 
+   at the same time from affecting your I2C bus stability may be challenging. 
+ - A new function 'fill' has been introduced. This fuction allows to fill servo 
+   moves with a vector over a range. This is a second possibility to create
+   moves apart from recording moves via a joystick. 
+ - A new function 'copy' has been introduced, that allows to copy a range of 
+   servos to other servos along with moving the content within servo moves
+   (shifting). The copying direction may be in either way including inverting
+   the copy direction. Also inverting the servo movement direction is possible. 
+
+live.pl:
+ - no visible changes to the user.
+
+Changes from 1.0 to 1.1
+For all programs:
+Change to library WiringPi - this allows to run on different platforms
+
+track.pl became trackui.pl - it now has the following features:
+ - abstacted movement positions (0-4096) so servos and joy stick may be changed
+   without the need of re.reading the movements. A modification in the settings
+   adapts new hardware to existing movement files.
+ - has a quasi graphical interface for more flexibility
+ - combination of movements - servos can be moved simultaneously with one joy
+   stick movement. 
+ - just parts within a complete sequence (a time slice) may be recorded or 
+   changed, without the need to re-do all movements for the given servo again.
+ - servos may be freely assgned to a joy stick ayis as per your needs.
+ - textual information can be applied to the servo number so they will be named.
+
+servocalib shows now al relevant positions of two servos
+ - servos may be changed with key presses on the joy stick.
+ - Resulting data can be used to set up the servo limits
+
+live.pl 
+ - no visible changes to the user.
+
