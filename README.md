@@ -42,7 +42,8 @@ To change the pin assignments, edit the `GPIO_PINS` dict near the top of [main.p
 
 ```
 FacialRecognitionProject/
-├── main.py                  # Primary entry point — run this
+├── main.py                  # Primary entry point — run this on the Pi
+├── test_detection.py        # Desktop test: webcam + face box + eye simulation
 ├── ComputerMQTT.py          # Alternative: publish face coords over MQTT
 ├── FaceRecognition.py       # Simple face-detection viewer (dev tool)
 ├── FacialRecognition.py     # Same as above (alternate copy)
@@ -68,6 +69,31 @@ Key tools inside:
 - `nodeconfig.pl` — network node configuration for ESP32-based remote nodes
 
 `main.py` is compatible with the bechele UDP wire format (port 7625) and uses the same servo PWM values defined in `bechele/usr/local/bin/bechele/Modules/ConfigL.pm`.
+
+## Testing on Your Desktop (Before the Pi)
+
+`test_detection.py` lets you verify the face detection and servo logic on any machine with a webcam — no Raspberry Pi hardware needed.
+
+```bash
+# Install the only dependency needed on a desktop
+pip install opencv-python
+
+# Run
+python test_detection.py
+
+# If your webcam isn't index 0
+python test_detection.py --camera 1
+```
+
+What you'll see:
+
+- **Red box** drawn around the detected face
+- **Animated eye pair** (bottom-right corner) whose pupils track the face position exactly as the animatronic eyes would move on the Pi
+- **Servo PWM panel** (left side) showing the 12-bit PWM value each servo channel would receive in real time, with a bar graph
+
+If the face box and eye simulation track your face correctly here, the servo motion on the Pi will be correct too. Press **Q** to quit.
+
+---
 
 ## Getting the Code onto the Pi
 

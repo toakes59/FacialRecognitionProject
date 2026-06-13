@@ -276,7 +276,7 @@ class FaceDetector:
         """Return (norm_x, norm_y, rect) for the largest face, or (None, None, None)."""
         gray  = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = self._clf.detectMultiScale(
-            gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60)
+            gray, scaleFactor=1.1, minNeighbors=6, minSize=(60, 60)
         )
         if len(faces) == 0:
             return None, None, None
