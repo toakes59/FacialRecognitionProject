@@ -40,6 +40,13 @@ try:
 except ImportError:
     _HW_AVAILABLE = False
 
+# gpiozero — for direct GPIO servo control (Pi only)
+try:
+    from gpiozero import Servo as _GpioServo
+    _GPIO_AVAILABLE = True
+except ImportError:
+    _GPIO_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Servo configuration — values taken directly from bechele ConfigL.pm
@@ -52,6 +59,18 @@ SERVO_CFG = {
     3: (208, 530, True,  "EyeLeft  up/down"),
     4: (248, 531, True,  "LidRight"),
     5: (239, 540, True,  "LidLeft"),
+}
+
+# GPIO pin assignments for direct servo control — BCM (Broadcom) numbering.
+# Change these to match your physical wiring.
+# GPIO 12/13/18/19 support hardware PWM; the rest use software PWM.
+GPIO_PINS = {
+    0: 12,   # EyeRight left/right
+    1: 13,   # EyeLeft  left/right
+    2: 18,   # EyeRight up/down
+    3: 19,   # EyeLeft  up/down
+    4: 24,   # LidRight
+    5: 25,   # LidLeft
 }
 
 # PCA9685 hardware settings
@@ -112,15 +131,33 @@ def _crc16(data: bytes) -> int:
 # ---------------------------------------------------------------------------
 
 class ServoDriver:
-    """Abstracts PCA9685 (I2C) and UDP output behind a common interface."""
+    """Abstracts GPIO, PCA9685 (I2C), and UDP output behind a common interface."""
 
-    def __init__(self, use_udp: bool = False):
-        self._use_udp = use_udp
-        self._pca      = None
-        self._sock     = None
-        self._counter  = 0
+    def __init__(self, use_udp: bool = False, use_gpio: bool = False):
+        self._use_udp   = use_udp
+        self._use_gpio  = use_gpio
+        self._pca       = None
+        self._sock      = None
+        self._gpio_servos: dict[int, "_GpioServo"] = {}
+        self._counter   = 0
 
-        if use_udp:
+        if use_gpio:
+            if not _GPIO_AVAILABLE:
+                raise RuntimeError(
+                    "gpiozero not installed. Run: pip install gpiozero lgpio"
+                )
+            period = 1.0 / PWM_FREQ_HZ
+            for ch, pin in GPIO_PINS.items():
+                s, e, _, _label = SERVO_CFG[ch]
+                self._gpio_servos[ch] = _GpioServo(
+                    pin,
+                    min_pulse_width=s * period / 4096,
+                    max_pulse_width=e * period / 4096,
+                    frame_width=period,
+                )
+            pins = ", ".join(f"ch{c}→GPIO{p}" for c, p in GPIO_PINS.items())
+            print(f"[driver] GPIO direct — {pins}")
+        elif use_udp:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             print(f"[driver] UDP → {UDP_BROADCAST}:{UDP_PORT}")
@@ -134,7 +171,18 @@ class ServoDriver:
 
     def write(self, pwm_map: dict[int, int]) -> None:
         """Send {channel: pwm_value, …} to hardware."""
-        if self._use_udp:
+        if self._use_gpio:
+            for ch, pwm_val in pwm_map.items():
+                if ch not in self._gpio_servos:
+                    continue
+                s, e, inv, _ = SERVO_CFG[ch]
+                mid  = (s + e) / 2.0
+                half = (e - s) / 2.0
+                norm = (pwm_val - mid) / half
+                if inv:
+                    norm = -norm
+                self._gpio_servos[ch].value = max(-1.0, min(1.0, norm))
+        elif self._use_udp:
             self._send_udp(pwm_map)
         elif self._pca:
             for ch, val in pwm_map.items():
@@ -158,6 +206,8 @@ class ServoDriver:
         self._sock.sendto(packet, (UDP_BROADCAST, UDP_PORT))
 
     def close(self) -> None:
+        for servo in self._gpio_servos.values():
+            servo.detach()
         if self._pca:
             self._pca.deinit()
         if self._sock:
@@ -282,7 +332,7 @@ def _blink_worker(eyes: EyeController, stop: threading.Event) -> None:
 # Main loop
 # ---------------------------------------------------------------------------
 
-def run(use_udp: bool, show_preview: bool) -> None:
+def run(use_udp: bool, use_gpio: bool, show_preview: bool) -> None:
     cap = cv2.VideoCapture(CAMERA_INDEX)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  FRAME_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
@@ -290,7 +340,7 @@ def run(use_udp: bool, show_preview: bool) -> None:
         raise RuntimeError(f"Cannot open camera index {CAMERA_INDEX}")
 
     detector = FaceDetector()
-    driver   = ServoDriver(use_udp=use_udp)
+    driver   = ServoDriver(use_udp=use_udp, use_gpio=use_gpio)
     eyes     = EyeController(driver)
 
     stop_evt    = threading.Event()
@@ -359,6 +409,12 @@ if __name__ == "__main__":
         description="Animatronic eye tracker — OpenCV + PCA9685 / bechele UDP"
     )
     parser.add_argument(
+        "--gpio",
+        action="store_true",
+        help="Drive servos directly from GPIO pins (see GPIO_PINS in this file) "
+             "instead of a PCA9685 board. Requires gpiozero and lgpio.",
+    )
+    parser.add_argument(
         "--udp",
         action="store_true",
         help="Broadcast servo packets via UDP (port 7625) for bechele network nodes "
@@ -371,4 +427,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    run(use_udp=args.udp, show_preview=not args.no_preview)
+    run(use_udp=args.udp, use_gpio=args.gpio, show_preview=not args.no_preview)
