@@ -162,10 +162,13 @@ class ServoDriver:
             self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             print(f"[driver] UDP → {UDP_BROADCAST}:{UDP_PORT}")
         elif _HW_AVAILABLE:
-            i2c = busio.I2C(board.SCL, board.SDA)
-            self._pca = PCA9685(i2c, address=I2C_ADDRESS)
-            self._pca.frequency = PWM_FREQ_HZ
-            print(f"[driver] PCA9685 I2C 0x{I2C_ADDRESS:02X} @ {PWM_FREQ_HZ} Hz")
+            try:
+                i2c = busio.I2C(board.SCL, board.SDA)
+                self._pca = PCA9685(i2c, address=I2C_ADDRESS)
+                self._pca.frequency = PWM_FREQ_HZ
+                print(f"[driver] PCA9685 I2C 0x{I2C_ADDRESS:02X} @ {PWM_FREQ_HZ} Hz")
+            except Exception as exc:
+                print(f"[driver] I2C init failed ({exc}); falling back to simulation mode")
         else:
             print("[driver] Simulation mode — no hardware detected (import failed)")
 
