@@ -161,6 +161,61 @@ Edit these constants near the top of `main.py`:
 | `BLINK_DURATION_S` | `0.12` | Duration of each blink |
 | `FACE_TIMEOUT_S` | `2.0` | Seconds before eyes return to center when no face |
 
+## Troubleshooting
+
+### SSH disconnects immediately when running `python3 main.py`
+
+OpenCV tries to open a GUI preview window, which kills the SSH session when no display is attached. Always pass `--no-preview` over SSH:
+
+```bash
+python3 main.py --gpio --no-preview
+```
+
+### `ValueError: No Hardware I2C on (scl,sda)=(3, 2)`
+
+I2C is disabled on the Pi. Enable it and reboot:
+
+```bash
+sudo raspi-config
+# Interface Options → I2C → Enable
+sudo reboot
+```
+
+This only affects PCA9685 mode. If you are using direct GPIO wiring, pass `--gpio` and I2C is never used.
+
+### Servos are not moving
+
+Make sure you are passing the `--gpio` flag. Without it the script runs in simulation mode and only prints servo values to the terminal — no GPIO pins are driven:
+
+```bash
+python3 main.py --gpio --no-preview
+```
+
+### Some servos spin continuously in one direction
+
+The bechele PCA9685 calibration values produce pulse widths up to ~2.8ms on some channels, which is outside the 1–2ms range standard hobby servos expect. A servo receiving a pulse beyond its physical range will spin against its end-stop.
+
+Edit `GPIO_PULSE_MS` near the top of `main.py` to match your servos:
+
+```python
+# Standard hobby servo (SG90, MG90S, etc.)
+GPIO_PULSE_MS = {
+    0: (1.0, 2.0),
+    1: (1.0, 2.0),
+    ...
+}
+
+# Wide-range servo (some bechele-kit servos accept 0.5–2.5ms)
+GPIO_PULSE_MS = {
+    0: (0.5, 2.5),
+    ...
+}
+```
+
+Start with `(1.0, 2.0)` (the default). If the servo moves but hits its end-stop before reaching the extreme position, widen to `(0.5, 2.5)`.
+
+---
+
 ## Requirements Summary
 
 - Python 3.7+

@@ -73,6 +73,22 @@ GPIO_PINS = {
     5: 25,   # LidLeft
 }
 
+# Physical pulse widths for each servo channel in milliseconds.
+# Standard hobby servo: min=1.0ms, max=2.0ms (neutral at 1.5ms).
+# Wide-range servo:     min=0.5ms, max=2.5ms.
+# The bechele PCA9685 counts in SERVO_CFG can exceed 2ms when converted,
+# which causes standard servos to spin against their end-stop. Set these
+# to the actual range your servos accept, then tune SERVO_CFG to map
+# movement within that physical range.
+GPIO_PULSE_MS = {
+    0: (1.0, 2.0),   # EyeRight left/right
+    1: (1.0, 2.0),   # EyeLeft  left/right
+    2: (1.0, 2.0),   # EyeRight up/down
+    3: (1.0, 2.0),   # EyeLeft  up/down
+    4: (1.0, 2.0),   # LidRight
+    5: (1.0, 2.0),   # LidLeft
+}
+
 # PCA9685 hardware settings
 I2C_ADDRESS  = 0x40   # default address; next board is 0x41, etc.
 PWM_FREQ_HZ  = 50     # must match bechele i2c_freq
@@ -146,14 +162,12 @@ class ServoDriver:
                 raise RuntimeError(
                     "gpiozero not installed. Run: pip install gpiozero lgpio"
                 )
-            period = 1.0 / PWM_FREQ_HZ
             for ch, pin in GPIO_PINS.items():
-                s, e, _, _label = SERVO_CFG[ch]
+                min_ms, max_ms = GPIO_PULSE_MS[ch]
                 self._gpio_servos[ch] = _GpioServo(
                     pin,
-                    min_pulse_width=s * period / 4096,
-                    max_pulse_width=e * period / 4096,
-                    frame_width=period,
+                    min_pulse_width=min_ms / 1000,
+                    max_pulse_width=max_ms / 1000,
                 )
             pins = ", ".join(f"ch{c}→GPIO{p}" for c, p in GPIO_PINS.items())
             print(f"[driver] GPIO direct — {pins}")
