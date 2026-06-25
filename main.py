@@ -285,6 +285,15 @@ class EyeController:
         self.target_x = 0.0
         self.target_y = 0.0
 
+    def home(self) -> None:
+        """Snap all axes to home position instantly, bypassing smoothing."""
+        self.target_x = 0.0
+        self.target_y = 0.0
+        self._curr_x  = 0.0
+        self._curr_y  = 0.0
+        self.lid      = 0.0
+        self.tick()
+
 
 # ---------------------------------------------------------------------------
 # Face detector
@@ -367,6 +376,11 @@ def run(use_udp: bool, use_gpio: bool, show_preview: bool) -> None:
     detector = FaceDetector()
     driver   = ServoDriver(use_udp=use_udp, use_gpio=use_gpio)
     eyes     = EyeController(driver)
+
+    print("Homing servos...")
+    eyes.home()
+    time.sleep(1.0)
+    print("Homing complete.")
 
     stop_evt    = threading.Event()
     blink_thread = threading.Thread(
