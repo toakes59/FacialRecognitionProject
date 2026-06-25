@@ -102,6 +102,7 @@ FRAME_HEIGHT  = 480
 LOOP_HZ       = 20    # matches bechele's 20 Hz refresh rate
 SMOOTHING     = 0.15  # low-pass coefficient (higher = faster response)
 DEAD_ZONE     = 0.05  # normalised dead-zone radius around centre
+SNAP_THRESHOLD = 0.002  # snap smoothed position to target when this close
 
 # Blink
 BLINK_INTERVAL_S = 5.0
@@ -155,6 +156,7 @@ class ServoDriver:
         self._pca       = None
         self._sock      = None
         self._gpio_servos: dict[int, "_GpioServo"] = {}
+        self._last_gpio_norm: dict[int, float] = {}
         self._counter   = 0
 
         if use_gpio:
@@ -198,7 +200,11 @@ class ServoDriver:
                 norm = (pwm_val - mid) / half
                 if inv:
                     norm = -norm
-                self._gpio_servos[ch].value = max(-1.0, min(1.0, norm))
+                norm = max(-1.0, min(1.0, norm))
+                if abs(norm - self._last_gpio_norm.get(ch, float("inf"))) < 0.001:
+                    continue
+                self._last_gpio_norm[ch] = norm
+                self._gpio_servos[ch].value = norm
         elif self._use_udp:
             self._send_udp(pwm_map)
         elif self._pca:
@@ -250,8 +256,10 @@ class EyeController:
 
     def tick(self) -> None:
         """Apply smoothing and push positions to hardware.  Call at LOOP_HZ."""
-        self._curr_x += (self.target_x - self._curr_x) * SMOOTHING
-        self._curr_y += (self.target_y - self._curr_y) * SMOOTHING
+        dx = self.target_x - self._curr_x
+        self._curr_x = self.target_x if abs(dx) < SNAP_THRESHOLD else self._curr_x + dx * SMOOTHING
+        dy = self.target_y - self._curr_y
+        self._curr_y = self.target_y if abs(dy) < SNAP_THRESHOLD else self._curr_y + dy * SMOOTHING
 
         pwm_map: dict[int, int] = {}
 
