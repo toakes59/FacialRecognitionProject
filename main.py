@@ -366,7 +366,7 @@ def _blink_worker(eyes: EyeController, stop: threading.Event) -> None:
 # Main loop
 # ---------------------------------------------------------------------------
 
-def run(use_udp: bool, use_gpio: bool, show_preview: bool) -> None:
+def run(use_udp: bool, use_gpio: bool, show_preview: bool, bashful: bool) -> None:
     cap = cv2.VideoCapture(CAMERA_INDEX)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  FRAME_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
@@ -392,7 +392,8 @@ def run(use_udp: bool, use_gpio: bool, show_preview: bool) -> None:
     last_face_time  = time.monotonic()
 
     print(f"Running at {LOOP_HZ} Hz — {'UDP' if use_udp else 'I2C'} output. "
-          f"{'Preview on.' if show_preview else 'Headless.'}")
+          f"{'Preview on.' if show_preview else 'Headless.'} "
+          f"{'Bashful mode (looks away).' if bashful else 'Look-at mode.'}")
 
     try:
         while True:
@@ -403,12 +404,15 @@ def run(use_udp: bool, use_gpio: bool, show_preview: bool) -> None:
                 time.sleep(0.05)
                 continue
 
-            # Flip horizontally so the preview feels like a mirror and
-            # negate norm_x so the eyes still track in the correct direction.
+            # Flip horizontally so the preview feels like a mirror. nx is
+            # measured on that mirrored frame, so left as-is it drives the
+            # eyes toward the person (look-at mode); negating it drives
+            # them the opposite way, away from the person (bashful mode).
             display_frame = cv2.flip(frame, 1)
             nx, ny, rect  = detector.detect(display_frame)
             if nx is not None:
-                nx = -nx  # undo the display flip for servo direction
+                if bashful:
+                    nx = -nx
                 eyes.target_x = nx
                 eyes.target_y = ny
                 last_face_time = time.monotonic()
@@ -464,6 +468,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable the camera preview window (useful for headless operation).",
     )
+    parser.add_argument(
+        "--bashful",
+        action="store_true",
+        help="Eyes look away from the detected face instead of at it.",
+    )
     args = parser.parse_args()
 
-    run(use_udp=args.udp, use_gpio=args.gpio, show_preview=not args.no_preview)
+    run(use_udp=args.udp, use_gpio=args.gpio, show_preview=not args.no_preview,
+        bashful=args.bashful)
