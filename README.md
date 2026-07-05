@@ -2,6 +2,15 @@
 
 Detects a person's face using OpenCV on a Raspberry Pi 5 and drives a set of 3D-printed animatronic eyes via servo motors so they follow the detected face in real time.
 
+## Credits
+
+The animatronic eye mechanism, 3D-printable models, and a large portion of the servo/network control code (see the `bechele/` folder) come from the **bechele** project:
+
+- Code: https://github.com/bechele/bechele
+- 3D models and project page: https://bechele.de/?page_id=70
+
+This repository builds an OpenCV-based face tracker (`main.py`) on top of that hardware and servo configuration. All credit for the eye assembly design and the original Perl/ESP32 control stack belongs to bechele.
+
 ## How It Works
 
 1. A USB camera (Logitech webcam) or Pi Camera feeds frames into OpenCV.
@@ -60,7 +69,7 @@ The files other than `main.py` are earlier development iterations and utilities 
 
 ## The `bechele/` Folder
 
-This folder contains the Perl-based control software that ships with the 3D-printed animatronic eye files from [bechele.de](https://bechele.de). It is **not written by this project** — it is the vendor-provided tooling for the eye hardware.
+This folder contains the Perl-based control software that ships with the 3D-printed animatronic eye files from the [bechele project](https://bechele.de/?page_id=70) ([source](https://github.com/bechele/bechele)). It is **not written by this project** — it is the vendor-provided tooling for the eye hardware.
 
 Key tools inside:
 - `trackui.pl` — interactive UI for recording eye movement sequences
