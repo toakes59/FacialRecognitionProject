@@ -404,15 +404,18 @@ def run(use_udp: bool, use_gpio: bool, show_preview: bool, bashful: bool) -> Non
                 time.sleep(0.05)
                 continue
 
-            # Flip horizontally so the preview feels like a mirror. nx is
-            # measured on that mirrored frame, so left as-is it drives the
-            # eyes toward the person (look-at mode); negating it drives
-            # them the opposite way, away from the person (bashful mode).
+            # Flip horizontally so the preview feels like a mirror. Raw nx
+            # (from that mirrored frame) already drives the eyes toward the
+            # person; raw ny drives them away, so ny needs negating for
+            # look-at mode. Bashful mode swaps both, so the eyes look away
+            # from the person on both axes.
             display_frame = cv2.flip(frame, 1)
             nx, ny, rect  = detector.detect(display_frame)
             if nx is not None:
                 if bashful:
                     nx = -nx
+                else:
+                    ny = -ny
                 eyes.target_x = nx
                 eyes.target_y = ny
                 last_face_time = time.monotonic()
