@@ -55,8 +55,8 @@ except ImportError:
 SERVO_CFG = {
     0: (203, 390, False, "EyeRight left/right"),
     1: (270, 415, False, "EyeLeft  left/right"),
-    2: (211, 578, True,  "EyeRight up/down"),
-    3: (208, 530, True,  "EyeLeft  up/down"),
+    2: (211, 578, False, "EyeRight up/down"),
+    3: (208, 530, False, "EyeLeft  up/down"),
     4: (248, 531, False, "LidRight"),
     5: (239, 540, False, "LidLeft"),
 }
