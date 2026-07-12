@@ -57,8 +57,8 @@ SERVO_CFG = {
     1: (270, 415, False, "EyeLeft  left/right"),
     2: (211, 578, True,  "EyeRight up/down"),
     3: (208, 530, True,  "EyeLeft  up/down"),
-    4: (248, 531, True,  "LidRight"),
-    5: (239, 540, True,  "LidLeft"),
+    4: (248, 531, False, "LidRight"),
+    5: (239, 540, False, "LidLeft"),
 }
 
 # GPIO pin assignments for direct servo control — BCM (Broadcom) numbering.
