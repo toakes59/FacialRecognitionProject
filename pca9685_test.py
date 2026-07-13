@@ -17,12 +17,13 @@ Usage:
 import argparse
 import time
 
-from main import SERVO_CFG, norm_to_pwm, ServoDriver, EyeController
+from main import SERVO_CFG, TRIM, norm_to_pwm, ServoDriver, EyeController
 
 PAUSE = 1.5  # seconds to hold each position
 
 
 def test_channel(driver: ServoDriver, channel: int, label: str, s: int, e: int, inv: bool) -> None:
+    trim = TRIM[channel]
     print(f"\n--- {label}  ch{channel} ---")
     steps = [
         ("center (0.0)", 0.0),
@@ -33,7 +34,7 @@ def test_channel(driver: ServoDriver, channel: int, label: str, s: int, e: int, 
     ]
     for description, norm in steps:
         print(f"  {description}", end="", flush=True)
-        driver.write({channel: norm_to_pwm(norm, s, e, inv)})
+        driver.write({channel: norm_to_pwm(norm, s, e, inv, trim)})
         time.sleep(PAUSE)
         print("  done")
 
@@ -41,7 +42,7 @@ def test_channel(driver: ServoDriver, channel: int, label: str, s: int, e: int, 
 def hold_center(driver: ServoDriver, channels: list[int]) -> None:
     for ch in channels:
         s, e, inv, label = SERVO_CFG[ch]
-        driver.write({ch: norm_to_pwm(0.0, s, e, inv)})
+        driver.write({ch: norm_to_pwm(0.0, s, e, inv, TRIM[ch])})
         print(f"ch{ch}: holding center — {label}")
 
     print("\nPress Ctrl+C to release and exit.")

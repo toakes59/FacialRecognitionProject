@@ -61,6 +61,20 @@ SERVO_CFG = {
     5: (239, 540, False, "LidLeft"),
 }
 
+# Fine-tune each channel's centre point without changing its full travel range
+# or touching the mechanical assembly. Units are raw PWM counts (same scale as
+# SERVO_CFG's start/end, 0-4095 @ 50 Hz): positive shifts centre toward `end`,
+# negative shifts toward `start`. Start with small nudges (+/-5 to 10) and
+# re-check with `python3 pca9685_test.py --home`.
+TRIM = {
+    0: 0,
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+}
+
 # GPIO pin assignments for direct servo control — BCM (Broadcom) numbering.
 # Change these to match your physical wiring.
 # GPIO 12/13/18/19 support hardware PWM; the rest use software PWM.
@@ -121,16 +135,16 @@ UDP_SLOTS     = 64    # bechele always sends 64 servo slots
 # Helpers
 # ---------------------------------------------------------------------------
 
-def norm_to_pwm(value: float, start: int, end: int, inverted: bool) -> int:
+def norm_to_pwm(value: float, start: int, end: int, inverted: bool, trim: int = 0) -> int:
     """Map normalised position [-1, +1] → PWM count within [start, end].
 
-    0.0 → midpoint.  Clamps to [start, end].
+    0.0 → midpoint + trim.  Clamps to [start, end].
     """
     if inverted:
         value = -value
     mid  = (start + end) / 2.0
     half = (end - start) / 2.0
-    return int(max(start, min(end, mid + value * half)))
+    return int(max(start, min(end, mid + value * half + trim)))
 
 
 def _crc16(data: bytes) -> int:
@@ -266,18 +280,18 @@ class EyeController:
         # Horizontal
         for ch in (0, 1):
             s, e, inv, _ = SERVO_CFG[ch]
-            pwm_map[ch] = norm_to_pwm(self._curr_x, s, e, inv)
+            pwm_map[ch] = norm_to_pwm(self._curr_x, s, e, inv, TRIM[ch])
 
         # Vertical
         for ch in (2, 3):
             s, e, inv, _ = SERVO_CFG[ch]
-            pwm_map[ch] = norm_to_pwm(self._curr_y, s, e, inv)
+            pwm_map[ch] = norm_to_pwm(self._curr_y, s, e, inv, TRIM[ch])
 
         # Lids: map [0,1] → [-1,+1] for norm_to_pwm
         lid_norm = self.lid * 2.0 - 1.0
         for ch in (4, 5):
             s, e, inv, _ = SERVO_CFG[ch]
-            pwm_map[ch] = norm_to_pwm(lid_norm, s, e, inv)
+            pwm_map[ch] = norm_to_pwm(lid_norm, s, e, inv, TRIM[ch])
 
         self._driver.write(pwm_map)
 
